@@ -64,6 +64,8 @@ void FastText::getWordVector(Vector& vec, const std::string& word) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
   vec.zero();
   for (int i = 0; i < ngrams.size(); i ++) {
+    // based on paper "Enriching Word Vectors with Subword Information"
+    // We represent a word by the sum of the vector representations of its n-grams. 
     addInputVector(vec, ngrams[i]);
   }
   if (ngrams.size() > 0) {
@@ -153,6 +155,9 @@ void FastText::saveModel() {
   saveModel(fn);
 }
 
+/*
+ * args, dict, quant, (q)input, qout, (q)output
+ */
 void FastText::saveModel(const std::string path) {
   std::ofstream ofs(path, std::ofstream::binary);
   if (!ofs.is_open()) {

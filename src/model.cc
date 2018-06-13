@@ -154,6 +154,7 @@ void Model::predict(const std::vector<int32_t>& input, int32_t k, real threshold
   heap.reserve(k + 1);
   computeHidden(input, hidden);
   if (args_->loss == loss_name::hs) {
+    // hierarchical softmax requires dfs search
     dfs(k, threshold, 2 * osz_ - 2, 0.0, heap, hidden);
   } else {
     findKBest(k, threshold, heap, hidden, output);

@@ -20,6 +20,12 @@
 
 namespace fasttext {
 
+/**
+ * http://mccormickml.com/2017/10/13/product-quantizer-tutorial-part-1/
+ * Product quantization for nearest neighbor search
+ *	Jegou, Douze, Schmid
+ * https://lear.inrialpes.fr/pubs/2011/JDS11/jegou_searching_with_quantization.pdf
+ */
 class ProductQuantizer {
   protected:
     const int32_t nbits_ = 8;

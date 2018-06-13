@@ -16,7 +16,9 @@
 
 namespace fasttext {
 
+// continuous bag of words, Skip gram, Supervised 
 enum class model_name : int { cbow = 1, sg, sup };
+// hierarchical softmax, negative sampling, softmax
 enum class loss_name : int { hs = 1, ns, softmax };
 
 class Args {
