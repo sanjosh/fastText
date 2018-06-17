@@ -53,10 +53,15 @@ void Model::setQuantizePointer(std::shared_ptr<QMatrix> qwi,
   }
 }
 
+// TRAINING START 
+
 real Model::binaryLogistic(int32_t target, bool label, real lr) {
   real score = sigmoid(wo_->dotRow(hidden_, target));
+	// SGD
   real alpha = lr * (real(label) - score);
+	// add wo_ to gradient
   grad_.addRow(*wo_, target, alpha);
+	// add hidden * alpha to target row
   wo_->addRow(hidden_, target, alpha);
   if (label) {
     return -log(score);
@@ -89,6 +94,48 @@ real Model::hierarchicalSoftmax(int32_t target, real lr) {
   return loss;
 }
 
+
+real Model::softmax(int32_t target, real lr) {
+  grad_.zero();
+  computeOutputSoftmax();
+  for (int32_t i = 0; i < osz_; i++) {
+    real label = (i == target) ? 1.0 : 0.0;
+    real alpha = lr * (label - output_[i]);
+    grad_.addRow(*wo_, i, alpha);
+    wo_->addRow(hidden_, i, alpha);
+  }
+  return -log(output_[target]);
+}
+
+/**
+ * @param lr is learning rate
+ */
+void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
+  assert(target >= 0);
+  assert(target < osz_);
+  if (input.size() == 0) return;
+  computeHidden(input, hidden_);
+  if (args_->loss == loss_name::ns) {
+    loss_ += negativeSampling(target, lr);
+  } else if (args_->loss == loss_name::hs) {
+    loss_ += hierarchicalSoftmax(target, lr);
+  } else {
+    loss_ += softmax(target, lr);
+  }
+  nexamples_ += 1;
+
+  if (args_->model == model_name::sup) {
+    grad_.mul(1.0 / input.size());
+  }
+  for (auto it = input.cbegin(); it != input.cend(); ++it) {
+		// add gradient to *it row
+    wi_->addRow(grad_, *it, 1.0);
+  }
+}
+
+
+// TRAINING END 
+
 void Model::computeOutputSoftmax(Vector& hidden, Vector& output) const {
   if (quant_ && args_->qout) {
     output.mul(*qwo_, hidden);
@@ -112,18 +159,6 @@ void Model::computeOutputSoftmax() {
   computeOutputSoftmax(hidden_, output_);
 }
 
-real Model::softmax(int32_t target, real lr) {
-  grad_.zero();
-  computeOutputSoftmax();
-  for (int32_t i = 0; i < osz_; i++) {
-    real label = (i == target) ? 1.0 : 0.0;
-    real alpha = lr * (label - output_[i]);
-    grad_.addRow(*wo_, i, alpha);
-    wo_->addRow(hidden_, i, alpha);
-  }
-  return -log(output_[target]);
-}
-
 void Model::computeHidden(const std::vector<int32_t>& input, Vector& hidden) const {
   assert(hidden.size() == hsz_);
   hidden.zero();
@@ -141,6 +176,8 @@ bool Model::comparePairs(const std::pair<real, int32_t> &l,
                          const std::pair<real, int32_t> &r) {
   return l.first > r.first;
 }
+
+// PREDICTION START
 
 void Model::predict(const std::vector<int32_t>& input, int32_t k, real threshold,
                     std::vector<std::pair<real, int32_t>>& heap,
@@ -222,27 +259,7 @@ void Model::dfs(int32_t k, real threshold, int32_t node, real score,
   dfs(k, threshold, tree[node].right, score + std_log(f), heap, hidden);
 }
 
-void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
-  assert(target >= 0);
-  assert(target < osz_);
-  if (input.size() == 0) return;
-  computeHidden(input, hidden_);
-  if (args_->loss == loss_name::ns) {
-    loss_ += negativeSampling(target, lr);
-  } else if (args_->loss == loss_name::hs) {
-    loss_ += hierarchicalSoftmax(target, lr);
-  } else {
-    loss_ += softmax(target, lr);
-  }
-  nexamples_ += 1;
-
-  if (args_->model == model_name::sup) {
-    grad_.mul(1.0 / input.size());
-  }
-  for (auto it = input.cbegin(); it != input.cend(); ++it) {
-    wi_->addRow(grad_, *it, 1.0);
-  }
-}
+// PREDICTION END
 
 void Model::setTargetCounts(const std::vector<int64_t>& counts) {
   assert(counts.size() == osz_);
@@ -325,6 +342,10 @@ real Model::getLoss() const {
   return loss_ / nexamples_;
 }
 
+/** 
+ * precompute logistic function at various values
+ * 0, 16, 32, ... 512
+ */
 void Model::initSigmoid() {
   for (int i = 0; i < SIGMOID_TABLE_SIZE + 1; i++) {
     real x = real(i * 2 * MAX_SIGMOID) / SIGMOID_TABLE_SIZE - MAX_SIGMOID;

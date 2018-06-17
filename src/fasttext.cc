@@ -272,6 +272,7 @@ void FastText::printInfo(real progress, real loss, std::ostream& log_stream) {
 
 std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
   Vector norms(input_->size(0));
+  // get norms of each row (sqrt of square of each cell in row)
   input_->l2NormRow(norms);
   std::vector<int32_t> idx(input_->size(0), 0);
   std::iota(idx.begin(), idx.end(), 0);
@@ -346,6 +347,7 @@ void FastText::cbow(Model& model, real lr,
   std::vector<int32_t> bow;
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for (int32_t w = 0; w < line.size(); w++) {
+    // boundary around word is picked at random
     int32_t boundary = uniform(model.rng);
     bow.clear();
     for (int32_t c = -boundary; c <= boundary; c++) {
@@ -354,6 +356,7 @@ void FastText::cbow(Model& model, real lr,
         bow.insert(bow.end(), ngrams.cbegin(), ngrams.cend());
       }
     }
+    // cbow model update takes ngrams of all words in neighbourhood
     model.update(bow, line[w], lr);
   }
 }
@@ -362,10 +365,12 @@ void FastText::skipgram(Model& model, real lr,
                         const std::vector<int32_t>& line) {
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for (int32_t w = 0; w < line.size(); w++) {
+    // boundary around word is picked at random
     int32_t boundary = uniform(model.rng);
     const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
     for (int32_t c = -boundary; c <= boundary; c++) {
       if (c != 0 && w + c >= 0 && w + c < line.size()) {
+        // skipgram model update uses ngrams of one word at a time
         model.update(ngrams, line[w + c], lr);
       }
     }
@@ -575,8 +580,12 @@ void FastText::analogies(int32_t k) {
 
 void FastText::trainThread(int32_t threadId) {
   std::ifstream ifs(args_->input);
+  // each thread works on independent subset of input
   utils::seek(ifs, threadId * utils::size(ifs) / args_->thread);
 
+  // input and output matrix shared by all threads
+  // TODO : how is it thread safe ?
+  // threadId is used as random number seed
   Model model(input_, output_, args_, threadId);
   if (args_->model == model_name::sup) {
     model.setTargetCounts(dict_->getCounts(entry_type::label));
@@ -589,6 +598,7 @@ void FastText::trainThread(int32_t threadId) {
   std::vector<int32_t> line, labels;
   while (tokenCount_ < args_->epoch * ntokens) {
     real progress = real(tokenCount_) / (args_->epoch * ntokens);
+    // linearly decaying learning rate (as paper says)
     real lr = args_->lr * (1.0 - progress);
     if (args_->model == model_name::sup) {
       localTokenCount += dict_->getLine(ifs, line, labels);
@@ -608,6 +618,7 @@ void FastText::trainThread(int32_t threadId) {
     }
   }
   if (threadId == 0)
+    // loss from only first thread is taken
     loss_ = model.getLoss();
   ifs.close();
 }

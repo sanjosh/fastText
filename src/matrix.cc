@@ -48,6 +48,9 @@ real Matrix::dotRow(const Vector& vec, int64_t i) const {
   return d;
 }
 
+/**
+ * add vec to the i-th row
+ */
 void Matrix::addRow(const Vector& vec, int64_t i, real a) {
   assert(i >= 0);
   assert(i < m_);
@@ -57,6 +60,10 @@ void Matrix::addRow(const Vector& vec, int64_t i, real a) {
   }
 }
 
+/**
+ * change rows between [ib, ie]
+ * multiply each cell of row by fixed elem from input vector
+ */
 void Matrix::multiplyRow(const Vector& nums, int64_t ib, int64_t ie) {
   if (ie == -1) {
     ie = m_;

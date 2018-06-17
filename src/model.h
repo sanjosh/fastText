@@ -39,7 +39,7 @@ class Model {
     std::shared_ptr<Args> args_;
     Vector hidden_;
     Vector output_;
-    Vector grad_;
+    Vector grad_; // only training
     int32_t hsz_;
     int32_t osz_;
     real loss_;

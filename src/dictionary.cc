@@ -40,6 +40,7 @@ int32_t Dictionary::find(const std::string& w) const {
 int32_t Dictionary::find(const std::string& w, uint32_t h) const {
   int32_t word2intsize = word2int_.size();
   int32_t id = h % word2intsize;
+  // use linear probing to find empty slot in hash table
   while (word2int_[id] != -1 && words_[word2int_[id]].word != w) {
     id = (id + 1) % word2intsize;
   }
@@ -55,8 +56,9 @@ void Dictionary::add(const std::string& w) {
     e.count = 1;
     e.type = getType(w);
     words_.push_back(e);
-    word2int_[h] = size_++;
+    word2int_[h] = size_++; // points to "words_" vector slot
   } else {
+    // same word occurred twice
     words_[word2int_[h]].count++;
   }
 }
@@ -107,6 +109,9 @@ void Dictionary::getSubwords(const std::string& word,
   }
 }
 
+/** 
+ * discard is true if P(discard) less than random number
+ */
 bool Dictionary::discard(int32_t id, real rand) const {
   assert(id >= 0);
   assert(id < nwords_);
@@ -140,6 +145,9 @@ std::string Dictionary::getWord(int32_t id) const {
   return words_[id].word;
 }
 
+/**
+ * compute FNV-1a hash of word
+ */
 uint32_t Dictionary::hash(const std::string& str) const {
   uint32_t h = 2166136261;
   for (size_t i = 0; i < str.size(); i++) {
@@ -149,20 +157,31 @@ uint32_t Dictionary::hash(const std::string& str) const {
   return h;
 }
 
+/**
+ * Given word = 'abc', 
+ * Assuming args_->minn = 1, args_->maxn = 3
+ * Returns ngram indices for 
+ * 'a', 'ab', 'abc'
+ * 'b', 'bc'
+ * 'c'
+ */
 void Dictionary::computeSubwords(const std::string& word,
-                               std::vector<int32_t>& ngrams,
+                               std::vector<int32_t>& ngram_hashes,
                                std::vector<std::string>& substrings) const {
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
+    // https://stackoverflow.com/questions/3911536/utf-8-unicode-whats-with-0xc0-and-0x80
+    // continue if this is a continuation byte
     if ((word[i] & 0xC0) == 0x80) continue;
     for (size_t j = i, n = 1; j < word.size() && n <= args_->maxn; n++) {
       ngram.push_back(word[j++]);
       while (j < word.size() && (word[j] & 0xC0) == 0x80) {
+        // is a continuation byte
         ngram.push_back(word[j++]);
       }
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
         int32_t h = hash(ngram) % args_->bucket;
-        ngrams.push_back(nwords_ + h);
+        ngram_hashes.push_back(nwords_ + h);
         substrings.push_back(ngram);
       }
     }
@@ -170,7 +189,7 @@ void Dictionary::computeSubwords(const std::string& word,
 }
 
 void Dictionary::computeSubwords(const std::string& word,
-                               std::vector<int32_t>& ngrams) const {
+                               std::vector<int32_t>& ngram_hashes) const {
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
     if ((word[i] & 0xC0) == 0x80) continue;
@@ -181,7 +200,8 @@ void Dictionary::computeSubwords(const std::string& word,
       }
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
         int32_t h = hash(ngram) % args_->bucket;
-        pushHash(ngrams, h);
+        // add hash of any ngram
+        pushHash(ngram_hashes, h);
       }
     }
   }
@@ -274,6 +294,9 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
   }
 }
 
+/**
+ * P(discard) high if word more frequent ?
+ */
 void Dictionary::initTableDiscard() {
   pdiscard_.resize(size_);
   for (size_t i = 0; i < size_; i++) {
@@ -326,6 +349,10 @@ void Dictionary::reset(std::istream& in) const {
   }
 }
 
+/**
+ * @param fill with vector of tokens for each word in the line
+ * @return number of tokens
+ */
 int32_t Dictionary::getLine(std::istream& in,
                             std::vector<int32_t>& words,
                             std::minstd_rand& rng) const {
@@ -349,6 +376,10 @@ int32_t Dictionary::getLine(std::istream& in,
   return ntokens;
 }
 
+/**
+ * For each word in line, return labels and words found
+ * @return number of tokens found
+ */
 int32_t Dictionary::getLine(std::istream& in,
                             std::vector<int32_t>& words,
                             std::vector<int32_t>& labels) const {
@@ -377,6 +408,9 @@ int32_t Dictionary::getLine(std::istream& in,
   return ntokens;
 }
 
+/**
+ * find and insert hash of ngram number 'id'
+ */
 void Dictionary::pushHash(std::vector<int32_t>& hashes, int32_t id) const {
   if (pruneidx_size_ == 0 || id < 0) return;
   if (pruneidx_size_ > 0) {
@@ -444,6 +478,7 @@ void Dictionary::load(std::istream& in) {
   initTableDiscard();
   initNgrams();
 
+  // reconstruct the hash table pointers
   int32_t word2intsize = std::ceil(size_ / 0.7);
   word2int_.assign(word2intsize, -1);
   for (int32_t i = 0; i < size_; i++) {
@@ -456,6 +491,11 @@ void Dictionary::init() {
   initNgrams();
 }
 
+/**
+ * @param idx is vector of hash entries which are to be retained
+ *
+ * any number above 'nwords_' is an ngram index
+ */
 void Dictionary::prune(std::vector<int32_t>& idx) {
   std::vector<int32_t> words, ngrams;
   for (auto it = idx.cbegin(); it != idx.cend(); ++it) {
@@ -466,11 +506,13 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
   idx = words;
 
   if (ngrams.size() != 0) {
+    // record the ngrams which are to be retained
     int32_t j = 0;
     for (const auto ngram : ngrams) {
       pruneidx_[ngram - nwords_] = j;
       j++;
     }
+    // idx now contains indices for words followed by ngrams
     idx.insert(idx.end(), ngrams.begin(), ngrams.end());
   }
   pruneidx_size_ = pruneidx_.size();
@@ -479,6 +521,7 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
 
   int32_t j = 0;
   for (int32_t i = 0; i < words_.size(); i++) {
+    // retain all labels or (words that are in the input hash list)
     if (getType(i) == entry_type::label || (j < words.size() && words[j] == i)) {
       words_[j] = words_[i];
       word2int_[find(words_[j].word)] = j;
@@ -487,6 +530,7 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
   }
   nwords_ = words.size();
   size_ = nwords_ +  nlabels_;
+  // erase the rest of the words
   words_.erase(words_.begin() + size_, words_.end());
   initNgrams();
 }

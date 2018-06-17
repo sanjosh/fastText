@@ -53,6 +53,9 @@ void Vector::addVector(const Vector& source, real s) {
   }
 }
 
+/** 
+ * add i-th of A to vector
+ */
 void Vector::addRow(const Matrix& A, int64_t i) {
   assert(i >= 0);
   assert(i < A.size(0));
