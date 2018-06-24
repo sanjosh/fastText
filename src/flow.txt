@@ -1,0 +1,36 @@
+
+Model type: supervised, ...
+loss type: ns, 
+IsQuantized ?
+
+Prediction only for supervised models
+
+hidden [model dim]
+output [dict->number of labels]
+
+1. get dict_id for each word
+2. compute hidden vector
+3. if loss type is hs, use dfs else kBest 
+4. produce vector of <score, node_id>
+4. for each word, get label
+
+FastTest::predict
+  for each (string)word
+	  dict_id = dict lookup for word
+	//called only for supervised
+  Model::predict(list of dict_id)
+		//hidden vector is sum of rows from input_matrix for each dict_id
+	  computeHidden
+		  for each dict_id
+			   hidden_vector[1..A.num_rows] += model.input_matrix[dict_id, col]
+		if hierarchical softmax
+		   use dfs
+			 for leaf nodes, push <score, node_number> into heap
+			 f = model.output_matrix[i] (dot_product) hidden vector
+			 f = 1/(1 + exp(-f))
+		else
+		   findKBest
+			    computeOutputSoftmax
+					   output[i] = dot product of output_matrix[i] * hidden
+					for each row in output matrix
+
