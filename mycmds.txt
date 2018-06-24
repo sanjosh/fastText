@@ -1,0 +1,4 @@
+
+../fasttext supervised -input cooking.train -output cooking.model | tee train.out
+
+../fasttest predict cooking.model.bin -

@@ -31,6 +31,9 @@ Dictionary::Dictionary(std::shared_ptr<Args> args) : args_(args),
 Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in) : args_(args),
   size_(0), nwords_(0), nlabels_(0), ntokens_(0), pruneidx_size_(-1) {
   load(in);
+  if (args_->verbose > 2) {
+	  std::cerr << "size=" << size_ << ",nwords=" << nwords_ << ",nlabels=" << nlabels_ << ",ntokens=" << ntokens_ << ",pruneidx_size=" << pruneidx_size_ << std::endl;
+  }
 }
 
 int32_t Dictionary::find(const std::string& w) const {
@@ -168,6 +171,10 @@ uint32_t Dictionary::hash(const std::string& str) const {
 void Dictionary::computeSubwords(const std::string& word,
                                std::vector<int32_t>& ngram_hashes,
                                std::vector<std::string>& substrings) const {
+  if (args_->verbose > 2) {
+    std::cerr << "DBG:compute ngram for " << word << std::endl;
+  }
+	// Can optimize if args_->maxn == 0 return here
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
     // https://stackoverflow.com/questions/3911536/utf-8-unicode-whats-with-0xc0-and-0x80
@@ -182,6 +189,9 @@ void Dictionary::computeSubwords(const std::string& word,
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
         int32_t h = hash(ngram) % args_->bucket;
         ngram_hashes.push_back(nwords_ + h);
+        if (args_->verbose > 2) {
+          std::cerr << "DBG:adding ngram " << ngram << std::endl;
+        }
         substrings.push_back(ngram);
       }
     }
@@ -330,6 +340,7 @@ void Dictionary::addSubwords(std::vector<int32_t>& line,
                              int32_t wid) const {
   if (wid < 0) { // out of vocab
     if (token != EOS) {
+			// only compute n-grams if out-of-vocab
       computeSubwords(BOW + token + EOW, line);
     }
   } else {
@@ -399,11 +410,18 @@ int32_t Dictionary::getLine(std::istream& in,
     if (type == entry_type::word) {
       addSubwords(words, token, wid);
       word_hashes.push_back(h);
+      if (args_->verbose > 2) {
+        std::cerr << "DBG:getLine add word=" << token << ",entry=" << h << std::endl;
+      }
     } else if (type == entry_type::label && wid >= 0) {
       labels.push_back(wid - nwords_);
+      if (args_->verbose > 2) {
+        std::cerr << "DBG:getLine add label=" << token << ",entry=" << wid - nwords_ << std::endl;
+      } 
     }
     if (token == EOS) break;
   }
+	// add hash entries for ngrams as well
   addWordNgrams(words, word_hashes, args_->wordNgrams);
   return ntokens;
 }
@@ -419,6 +437,9 @@ void Dictionary::pushHash(std::vector<int32_t>& hashes, int32_t id) const {
     } else {
       return;
     }
+  }
+  if (args_->verbose > 2) {
+    std::cerr << "DBG:pushHash for ngram " << nwords_ + id << std::endl;
   }
   hashes.push_back(nwords_ + id);
 }

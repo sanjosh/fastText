@@ -18,7 +18,7 @@ namespace fasttext {
 
 Args::Args() {
   lr = 0.05;
-  dim = 100;
+  dim = 100; // default number of cols of input & output matrix
   ws = 5;
   epoch = 5;
   minCount = 5;
@@ -28,8 +28,8 @@ Args::Args() {
   loss = loss_name::ns;
   model = model_name::sg;
   bucket = 2000000;
-  minn = 3;
-  maxn = 6;
+  minn = 3; // this enables ngrams 
+  maxn = 6; // this enables ngrams
   thread = 12;
   lrUpdateRate = 100;
   t = 1e-4;
@@ -84,7 +84,7 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     loss = loss_name::softmax;
     minCount = 1;
     minn = 0;
-    maxn = 0;
+    maxn = 0; // ngrams disabled for supervised
     lr = 0.1;
   } else if (command == "cbow") {
     model = model_name::cbow;

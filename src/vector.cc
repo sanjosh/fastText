@@ -55,6 +55,7 @@ void Vector::addVector(const Vector& source, real s) {
 
 /** 
  * add i-th of A to vector
+ * data_[1..n] = A[i, {1..n}] 
  */
 void Vector::addRow(const Matrix& A, int64_t i) {
   assert(i >= 0);

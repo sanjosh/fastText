@@ -417,9 +417,15 @@ void FastText::predict(
   if (words.empty()) return;
   Vector hidden(args_->dim);
   Vector output(dict_->nlabels());
+  if (args_->verbose > 2) {
+    std::cerr << "DBG:predict begin " << args_->dim << "," << dict_->nlabels() << std::endl;
+  }
   std::vector<std::pair<real,int32_t>> modelPredictions;
   model_->predict(words, k, threshold, modelPredictions, hidden, output);
   for (auto it = modelPredictions.cbegin(); it != modelPredictions.cend(); it++) {
+    if (args_->verbose > 2) {
+      std::cerr << "DBG:predict " << it->first << "," << it->second << "," << dict_->getLabel(it->second) << std::endl;
+    }
     predictions.push_back(std::make_pair(it->first, dict_->getLabel(it->second)));
   }
 }
@@ -596,7 +602,7 @@ void FastText::trainThread(int32_t threadId) {
   const int64_t ntokens = dict_->ntokens();
   int64_t localTokenCount = 0;
   std::vector<int32_t> line, labels;
-	// uses Hog Wild parallel approach
+  // uses Hog Wild parallel approach
   while (tokenCount_ < args_->epoch * ntokens) {
     real progress = real(tokenCount_) / (args_->epoch * ntokens);
     // linearly decaying learning rate (as paper says)
@@ -685,11 +691,17 @@ void FastText::train(const Args args) {
     input_ = std::make_shared<Matrix>(dict_->nwords()+args_->bucket, args_->dim);
     input_->uniform(1.0 / args_->dim);
   }
+  if (args_->verbose > 2) {
+    std::cerr << "DBG: model input set to " << input_->size(0) << "," << input_->size(1) << std::endl;
+  }
 
   if (args_->model == model_name::sup) {
     output_ = std::make_shared<Matrix>(dict_->nlabels(), args_->dim);
   } else {
     output_ = std::make_shared<Matrix>(dict_->nwords(), args_->dim);
+  }
+  if (args_->verbose > 2) {
+    std::cerr << "DBG: model output set to " << output_->size(0) << "," << output_->size(1) << std::endl;
   }
   output_->zero();
   startThreads();
