@@ -40,8 +40,8 @@ class Model {
     Vector hidden_;
     Vector output_;
     Vector grad_; // only training
-    int32_t hsz_;
-    int32_t osz_;
+    int32_t hsz_; // number of cols
+    int32_t osz_; // number of rows
     real loss_;
     int64_t nexamples_;
     std::vector<real> t_sigmoid_;

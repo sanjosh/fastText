@@ -34,6 +34,9 @@ void Matrix::uniform(real a) {
   }
 }
 
+/**
+ * @brief Dot product of i-th row of Matrix with vec
+ */
 real Matrix::dotRow(const Vector& vec, int64_t i) const {
   assert(i >= 0);
   assert(i < m_);
@@ -49,7 +52,7 @@ real Matrix::dotRow(const Vector& vec, int64_t i) const {
 }
 
 /**
- * add vec to the i-th row
+ * @brief add vec to the i-th row of Matrix
  */
 void Matrix::addRow(const Vector& vec, int64_t i, real a) {
   assert(i >= 0);
@@ -61,8 +64,8 @@ void Matrix::addRow(const Vector& vec, int64_t i, real a) {
 }
 
 /**
- * change rows between [ib, ie]
- * multiply each cell of row by fixed elem from input vector
+ * change Matrix rows between [ib, ie]
+ * multiply each cell of row by corresponding elem from input vector
  */
 void Matrix::multiplyRow(const Vector& nums, int64_t ib, int64_t ie) {
   if (ie == -1) {
@@ -94,6 +97,9 @@ void Matrix::divideRow(const Vector& denoms, int64_t ib, int64_t ie) {
   }
 }
 
+/**
+ * sqrt ( Mat[i,0]^2 + ... + Mat[i, n-1]^2 )
+ */
 real Matrix::l2NormRow(int64_t i) const {
   auto norm = 0.0;
   for (auto j = 0; j < n_; j++) {

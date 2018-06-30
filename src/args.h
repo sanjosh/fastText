@@ -31,9 +31,9 @@ class Args {
     Args();
     std::string input;
     std::string output;
-    double lr;
+    double lr; // learning rate
     int lrUpdateRate;
-    int dim;
+    int dim; // number of cols in input & output matrix
     int ws;
     int epoch;
     int minCount;
@@ -43,7 +43,7 @@ class Args {
     loss_name loss;
     model_name model;
     int bucket;
-    int minn;
+    int minn; // take ngrams from minn to maxn
     int maxn;
     int thread;
     double t;

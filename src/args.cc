@@ -17,7 +17,7 @@
 namespace fasttext {
 
 Args::Args() {
-  lr = 0.05;
+  lr = 0.05; 
   dim = 100; // default number of cols of input & output matrix
   ws = 5;
   epoch = 5;
@@ -81,10 +81,10 @@ void Args::parseArgs(const std::vector<std::string>& args) {
   std::string command(args[1]);
   if (command == "supervised") {
     model = model_name::sup;
-    loss = loss_name::softmax;
+    loss = loss_name::softmax; // loss is softmax for supervised; dont expect too many classes?
     minCount = 1;
     minn = 0;
-    maxn = 0; // ngrams disabled for supervised
+    maxn = 0; // ngrams disabled for supervised. how to process out-of-vocab?
     lr = 0.1;
   } else if (command == "cbow") {
     model = model_name::cbow;

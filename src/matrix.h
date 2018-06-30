@@ -24,8 +24,8 @@ class Vector;
 class Matrix {
  protected:
   std::vector<real> data_;
-  const int64_t m_;
-  const int64_t n_;
+  const int64_t m_; // number of rows
+  const int64_t n_; // number of columns
 
  public:
   Matrix();

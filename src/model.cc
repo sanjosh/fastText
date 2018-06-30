@@ -33,7 +33,7 @@ Model::Model(
   wi_ = wi;
   wo_ = wo;
   args_ = args;
-  osz_ = wo->size(0);
+  osz_ = wo->size(0); // number of rows
   hsz_ = args->dim;
   negpos = 0;
   loss_ = 0.0;
@@ -142,6 +142,25 @@ void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
 
 // TRAINING END 
 
+/**
+ * Apply softmax to ensure output values sum to 1 (i.e. interpret as probabilities)
+ *
+ * from https://jamesmccaffrey.wordpress.com/2016/03/04/the-max-trick-when-computing-softmax/
+ * the exp() of even a moderate-magnitude positive number can be astronomically huge, which 
+ * makes the scaling sum huge, and dividing by a huge number can cause arithmetic computation problems.
+ * A trick to avoid this computation problem is subtract the largest x value from each x value. 
+ * It turns out that the properties of the exp() function give you the same result but you 
+ * avoid extreme large numbers.
+ * The max trick isn’t entirely foolproof however, because e raised to a very small value can get 
+ * very close to 0.0 which can also potentially cause computation problems, which however, are 
+ * usually not troublesome in practice
+ *
+ * see also - avoid division
+ * https://jamesmccaffrey.wordpress.com/2018/05/18/avoiding-an-exception-when-calculating-softmax/
+ * A variation of the max trick is to avoid the division operation. To do this you compute the 
+ * ln() of the sum of the exp(x-max) values and then instead of dividing, you subtract and take 
+ * the exp(x – max – ln(sum)).
+ */
 void Model::computeOutputSoftmax(Vector& hidden, Vector& output) const {
   if (quant_ && args_->qout) {
     output.mul(*qwo_, hidden);
@@ -265,12 +284,14 @@ void Model::dfs(int32_t k, real threshold, int32_t node, real score,
   }
 
   if (tree[node].left == -1 && tree[node].right == -1) {
+		// this is a leaf node
     if (args_->verbose > 2) {
       std::cerr << "DBG:dfs " << score << "," << node << std::endl;
     }
     heap.push_back(std::make_pair(score, node));
     std::push_heap(heap.begin(), heap.end(), comparePairs);
     if (heap.size() > k) {
+			// trim heap to keep only top k
       std::pop_heap(heap.begin(), heap.end(), comparePairs);
       heap.pop_back();
     }
@@ -325,7 +346,7 @@ int32_t Model::getNegative(int32_t target) {
 }
 
 /**
- * @param counts number of times each word/label occurs in dict
+ * @param 'counts' is number of times each word/label occurs in dict
  */
 void Model::buildTree(const std::vector<int64_t>& counts) {
   tree.resize(2 * osz_ - 1);
