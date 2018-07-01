@@ -67,7 +67,7 @@ real Model::binaryLogistic(int32_t target, bool label, real lr) {
   real alpha = lr * (real(label) - score);
 	// add wo_ to gradient
   grad_.addRow(*wo_, target, alpha);
-	// add hidden * alpha to target row
+	// add (hidden * alpha) to target row
   wo_->addRow(hidden_, target, alpha);
   if (label) {
     return -log(score);
@@ -107,20 +107,26 @@ real Model::softmax(int32_t target, real lr) {
   for (int32_t i = 0; i < osz_; i++) {
     real label = (i == target) ? 1.0 : 0.0;
     real alpha = lr * (label - output_[i]);
+		// add (alpha * wo_[i]) to grad_
     grad_.addRow(*wo_, i, alpha);
+		// add (alpha * hidden) to wo_[i]
     wo_->addRow(hidden_, i, alpha);
   }
   return -log(output_[target]);
 }
 
 /**
+ * @param input vectors are changed
+ * @param target against which loss is computed
  * @param lr is learning rate
  */
 void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
   assert(target >= 0);
   assert(target < osz_);
   if (input.size() == 0) return;
+	// hidden = sum of word vectors in a line
   computeHidden(input, hidden_);
+	// compute gradient here
   if (args_->loss == loss_name::ns) {
     loss_ += negativeSampling(target, lr);
   } else if (args_->loss == loss_name::hs) {
@@ -134,7 +140,7 @@ void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
     grad_.mul(1.0 / input.size());
   }
   for (auto it = input.cbegin(); it != input.cend(); ++it) {
-		// add gradient to *it row
+		// add gradient to word vectors of each input word/label 
     wi_->addRow(grad_, *it, 1.0);
   }
 }
@@ -185,8 +191,7 @@ void Model::computeOutputSoftmax() {
 }
 
 /**
- * for each dict_id(i.e. word being looked up)
- *   hidden += the row for that "dict_id" in model.wi_ 
+ * hidden = sum of word vectors in a line
  */
 void Model::computeHidden(const std::vector<int32_t>& input, Vector& hidden) const {
   assert(hidden.size() == hsz_);

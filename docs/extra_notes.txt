@@ -14,7 +14,7 @@ handle
 2) misspelled words
 3) concat words
 4) rare words : common ngrams with frequent words will ensure good embedding
-5) words which mean two different things ??
+5) word disambiguation ? 
 
 Classes
 1) balanced => negative sampling

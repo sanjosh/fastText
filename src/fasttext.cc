@@ -356,7 +356,8 @@ void FastText::cbow(Model& model, real lr,
         bow.insert(bow.end(), ngrams.cbegin(), ngrams.cend());
       }
     }
-    // cbow model update takes ngrams of all words in neighbourhood
+		// cbow predicts word from its context
+    // cbow updates context word vectors based on current word
     model.update(bow, line[w], lr);
   }
 }
@@ -370,7 +371,8 @@ void FastText::skipgram(Model& model, real lr,
     const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
     for (int32_t c = -boundary; c <= boundary; c++) {
       if (c != 0 && w + c >= 0 && w + c < line.size()) {
-        // skipgram model update uses ngrams of one word at a time
+				// skipgram predicts context from word
+        // skipgram updates vectors of current word (ngrams) using surrounding words
         model.update(ngrams, line[w + c], lr);
       }
     }
