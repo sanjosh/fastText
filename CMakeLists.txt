@@ -61,3 +61,5 @@ install (TARGETS fasttext-static_pic
 install (TARGETS fasttext-bin
     RUNTIME DESTINATION bin
  PUBLIC_HEADER DESTINATION include/fasttext)
+
+add_subdirectory(redis)
