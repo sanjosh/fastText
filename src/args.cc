@@ -32,9 +32,9 @@ Args::Args() {
   maxn = 6; // this enables ngrams
   thread = 12;
   lrUpdateRate = 100;
-  t = 1e-4;
+  t = 1e-4; //0.0001
   label = "__label__";
-  verbose = 2;
+  verbose = 3;
   pretrainedVectors = "";
   saveOutput = false;
 

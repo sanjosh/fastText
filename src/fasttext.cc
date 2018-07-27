@@ -348,7 +348,7 @@ void FastText::cbow(Model& model, real lr,
   std::vector<int32_t> bow;
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for (int32_t w = 0; w < line.size(); w++) {
-    // boundary around word is picked at random
+    // boundary around word is picked at random (unlike word2vec)
     int32_t boundary = uniform(model.rng);
     bow.clear();
     for (int32_t c = -boundary; c <= boundary; c++) {
@@ -367,7 +367,7 @@ void FastText::skipgram(Model& model, real lr,
                         const std::vector<int32_t>& line) {
   std::uniform_int_distribution<> uniform(1, args_->ws);
   for (int32_t w = 0; w < line.size(); w++) {
-    // boundary around word is picked at random
+    // boundary around word is picked at random (unlike word2vec)
     int32_t boundary = uniform(model.rng);
     const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
     for (int32_t c = -boundary; c <= boundary; c++) {

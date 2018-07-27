@@ -119,7 +119,11 @@ bool Dictionary::discard(int32_t id, real rand) const {
   assert(id >= 0);
   assert(id < nwords_);
   if (args_->model == model_name::sup) return false;
-  return rand > pdiscard_[id];
+  const bool isDiscard = (rand > pdiscard_[id]);
+  if (args_->verbose > 2) {
+    std::cerr << "DBG:prob" << words_[id].word << "=" << isDiscard << std::endl;
+	}
+	return isDiscard;
 }
 
 int32_t Dictionary::getId(const std::string& w, uint32_t h) const {
@@ -282,6 +286,9 @@ void Dictionary::readFromFile(std::istream& in) {
   }
 }
 
+/**
+ * @brief purge rare words and labels below threshold
+ */
 void Dictionary::threshold(int64_t t, int64_t tl) {
   sort(words_.begin(), words_.end(), [](const entry& e1, const entry& e2) {
       if (e1.type != e2.type) return e1.type < e2.type;
@@ -305,13 +312,16 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
 }
 
 /**
- * P(discard) high if word more frequent ?
+ * P(discard) is higher if word is rare - like word2vec
  */
 void Dictionary::initTableDiscard() {
   pdiscard_.resize(size_);
   for (size_t i = 0; i < size_; i++) {
     real f = real(words_[i].count) / real(ntokens_);
     pdiscard_[i] = std::sqrt(args_->t / f) + args_->t / f;
+		if (args->verbose > 2) {
+      std::cerr << "DBG:discard of word=" << words_[i].word << ":" << pdiscard_[i] << std::endl;
+		}
   }
 }
 
@@ -346,7 +356,7 @@ void Dictionary::addSubwords(std::vector<int32_t>& line,
   } else {
     if (args_->maxn <= 0) { // in vocab w/o subwords
       line.push_back(wid);
-    } else { // in vocab w/ subwords
+    } else { // in vocab with subwords
       const std::vector<int32_t>& ngrams = getSubwords(wid);
       line.insert(line.end(), ngrams.cbegin(), ngrams.cend());
     }
