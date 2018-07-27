@@ -106,10 +106,11 @@ real Model::softmax(int32_t target, real lr) {
   computeOutputSoftmax();
   for (int32_t i = 0; i < osz_; i++) {
     real label = (i == target) ? 1.0 : 0.0;
+		// label - output is derivative of loss wrt match
     real alpha = lr * (label - output_[i]);
 		// add (alpha * wo_[i]) to grad_
     grad_.addRow(*wo_, i, alpha);
-		// add (alpha * hidden) to wo_[i]
+		// update weights by adding (alpha * hidden) to wo_[i]
     wo_->addRow(hidden_, i, alpha);
   }
   return -log(output_[target]);
@@ -124,7 +125,7 @@ void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
   assert(target >= 0);
   assert(target < osz_);
   if (input.size() == 0) return;
-	// hidden = sum of word vectors in a line
+	// hidden = average of word vectors in a line
   computeHidden(input, hidden_);
 	// compute gradient here
   if (args_->loss == loss_name::ns) {
@@ -141,6 +142,7 @@ void Model::update(const std::vector<int32_t>& input, int32_t target, real lr) {
   }
   for (auto it = input.cbegin(); it != input.cend(); ++it) {
 		// add gradient to word vectors of each input word/label 
+		// addition will move the vector of each input word closer
     wi_->addRow(grad_, *it, 1.0);
   }
 }
@@ -191,7 +193,7 @@ void Model::computeOutputSoftmax() {
 }
 
 /**
- * hidden = sum of word vectors in a line
+ * hidden = average of word vectors in a line (like word2vec)
  */
 void Model::computeHidden(const std::vector<int32_t>& input, Vector& hidden) const {
   assert(hidden.size() == hsz_);
