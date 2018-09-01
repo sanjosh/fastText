@@ -337,6 +337,7 @@ void FastText::supervised(
     const std::vector<int32_t>& line,
     const std::vector<int32_t>& labels) {
   if (labels.size() == 0 || line.size() == 0) return;
+	// if there are more than one labels for line, pick one at random
   std::uniform_int_distribution<> uniform(0, labels.size() - 1);
   int32_t i = uniform(model.rng);
   model.update(line, labels[i], lr);
