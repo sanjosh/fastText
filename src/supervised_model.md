@@ -40,50 +40,50 @@
 
 ```
   read labels + words from file and insert into dictionary
-	remove words and labels whose count less than "args.minCount" and "args.minCountLabel"
-	for each word/label
-	  set Discard Probability such that rare words are discarded
-	compute N-grams for each word based on "args.minn and args.maxn"
+  remove words and labels whose count less than "args.minCount" and "args.minCountLabel"
+  for each word/label
+    set Discard Probability such that rare words are discarded
+  compute N-grams for each word based on "args.minn and args.maxn"
 
-	if (pretrained vectors available)
-	  add them to Dictionary
-		set Model.inputMatrix = list of pretrained vecors
+  if (pretrained vectors available)
+    add them to Dictionary
+    set Model.inputMatrix = list of pretrained vecors
 
-	start training threads
-	in each training thread
+  start training threads
+  in each training thread
 
-	  initialize hierarchical softmax/negative sampling data based on label counts
+    initialize hierarchical softmax/negative sampling data based on label counts
 
     for each line
-		  for each word
-			  get vector from dictionary
-		Model.hiddenVector = average of vectors of each word in line
+      for each word
+        get vector from dictionary
+    Model.hiddenVector = average of vectors of each word in line
 
-		*assuming here that loss is set to softmax*
-		Model.outputVector = dot product of (outputMatrix . hidden)
-		compute softmax over outputVector
+    *assuming here that loss is set to softmax*
+    Model.outputVector = dot product of (outputMatrix . hidden)
+    compute softmax over outputVector
 
-		for each row in Model.outputMatrix
-			gradient = gradient + derivative of loss * row 
-			update weights of outputMatrix row by adding hiddenVec 
+    for each row in Model.outputMatrix
+      gradient = gradient + derivative of loss * row 
+      update weights of outputMatrix row by adding hiddenVec 
 
     Model.loss = -log(Model.outputVector[targetLabel])
 
-		for each word on input line
-			adjust input matrix by adding gradient to Model.inputMatrix[word] 
+    for each word on input line
+      adjust input matrix by adding gradient to Model.inputMatrix[word] 
 ```
 
 # Supervised model prediction
 
 ```
   for each word in line
-	  word_vector = dictionary[word]
-	hidden vector = average of vectors of all words in line
+    word_vector = dictionary[word]
+  hidden vector = average of vectors of all words in line
 
   Model.outputVector = dot product of (outputMatrix . hidden)
   compute softmax over outputVector
 
-	return top N labels in Model.outputVector above threshold
+  return top N labels in Model.outputVector above threshold
 
 ```
 
