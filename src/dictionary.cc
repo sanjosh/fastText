@@ -113,7 +113,8 @@ void Dictionary::getSubwords(const std::string& word,
 }
 
 /** 
- * discard is true if P(discard) less than random number
+ * discard frequent words
+ * do it only if model not supervised 
  */
 bool Dictionary::discard(int32_t id, real rand) const {
   assert(id >= 0);
@@ -290,10 +291,12 @@ void Dictionary::readFromFile(std::istream& in) {
  * @brief purge rare words and labels below threshold
  */
 void Dictionary::threshold(int64_t t, int64_t tl) {
+  // put words before labels AND frequent ones before rare
   sort(words_.begin(), words_.end(), [](const entry& e1, const entry& e2) {
       if (e1.type != e2.type) return e1.type < e2.type;
       return e1.count > e2.count;
     });
+  // remove rare words and labels
   words_.erase(remove_if(words_.begin(), words_.end(), [&](const entry& e) {
         return (e.type == entry_type::word && e.count < t) ||
                (e.type == entry_type::label && e.count < tl);
@@ -317,6 +320,7 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
 void Dictionary::initTableDiscard() {
   pdiscard_.resize(size_);
   for (size_t i = 0; i < size_; i++) {
+		// freq(word)
     real f = real(words_[i].count) / real(ntokens_);
     pdiscard_[i] = std::sqrt(args_->t / f) + args_->t / f;
 		if (args->verbose > 2) {

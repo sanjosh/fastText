@@ -34,3 +34,5 @@ FastTest::predict
 					   output[i] = dot product of output_matrix[i] * hidden
 					for each row in output matrix
 
+
+===================

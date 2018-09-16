@@ -60,6 +60,9 @@ int32_t FastText::getSubwordId(const std::string& word) const {
   return dict_->nwords() + h;
 }
 
+/**
+ * this will obtain vector even for out-of-vocab words
+ */
 void FastText::getWordVector(Vector& vec, const std::string& word) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
   vec.zero();

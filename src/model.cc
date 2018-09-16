@@ -242,6 +242,7 @@ void Model::predict(const std::vector<int32_t>& input, int32_t k, real threshold
  * called only during FastText::test
  */
 void Model::predict(
+
   const std::vector<int32_t>& input,
   int32_t k,
   real threshold,
@@ -353,6 +354,7 @@ int32_t Model::getNegative(int32_t target) {
 }
 
 /**
+ * build Huffman tree
  * @param 'counts' is number of times each word/label occurs in dict
  */
 void Model::buildTree(const std::vector<int64_t>& counts) {

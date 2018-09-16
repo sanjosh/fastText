@@ -32,13 +32,13 @@ struct Node {
 
 class Model {
   protected:
-    std::shared_ptr<Matrix> wi_;
-    std::shared_ptr<Matrix> wo_;
+    std::shared_ptr<Matrix> wi_; // [nwords + bucket x dim]
+    std::shared_ptr<Matrix> wo_; // [nlabels/nwords x dim] 
     std::shared_ptr<QMatrix> qwi_;
     std::shared_ptr<QMatrix> qwo_;
     std::shared_ptr<Args> args_;
-    Vector hidden_;
-    Vector output_;
+    Vector hidden_; // vector of length dim 
+    Vector output_; // vector of length dim
     Vector grad_; // only training
     int32_t hsz_; // number of cols
     int32_t osz_; // number of rows
@@ -49,7 +49,7 @@ class Model {
     // used for negative sampling:
     std::vector<int32_t> negatives_;
     size_t negpos;
-    // used for hierarchical softmax:
+    // huffman tree used for hierarchical softmax:
     std::vector< std::vector<int32_t> > paths;
     std::vector< std::vector<bool> > codes;
     std::vector<Node> tree;
