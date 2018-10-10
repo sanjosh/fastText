@@ -108,7 +108,7 @@ void Dictionary::getSubwords(const std::string& word,
     substrings.push_back(words_[i].word);
   }
   if (word != EOS) {
-    computeSubwords(BOW + word + EOW, ngrams, substrings);
+    computeSubwords(BOW + word + EOW, ngrams, &substrings);
   }
 }
 
@@ -153,13 +153,18 @@ std::string Dictionary::getWord(int32_t id) const {
   return words_[id].word;
 }
 
-/**
- * compute FNV-1a hash of word
- */
+// The correct implementation of fnv should be:
+// h = h ^ uint32_t(uint8_t(str[i]));
+// Unfortunately, earlier version of fasttext used
+// h = h ^ uint32_t(str[i]);
+// which is undefined behavior (as char can be signed or unsigned).
+// Since all fasttext models that were already released were trained
+// using signed char, we fixed the hash function to make models
+// compatible whatever compiler is used.
 uint32_t Dictionary::hash(const std::string& str) const {
   uint32_t h = 2166136261;
   for (size_t i = 0; i < str.size(); i++) {
-    h = h ^ uint32_t(str[i]);
+    h = h ^ uint32_t(int8_t(str[i]));
     h = h * 16777619;
   }
   return h;
@@ -174,12 +179,11 @@ uint32_t Dictionary::hash(const std::string& str) const {
  * 'c'
  */
 void Dictionary::computeSubwords(const std::string& word,
-                               std::vector<int32_t>& ngram_hashes,
-                               std::vector<std::string>& substrings) const {
+                               std::vector<int32_t>& ngrams,
+                               std::vector<std::string>* substrings) const {
   if (args_->verbose > 2) {
     std::cerr << "DBG:compute ngram for " << word << std::endl;
   }
-	// Can optimize if args_->maxn == 0 return here
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
     // https://stackoverflow.com/questions/3911536/utf-8-unicode-whats-with-0xc0-and-0x80
@@ -193,30 +197,11 @@ void Dictionary::computeSubwords(const std::string& word,
       }
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
         int32_t h = hash(ngram) % args_->bucket;
-        ngram_hashes.push_back(nwords_ + h);
-        if (args_->verbose > 2) {
-          std::cerr << "DBG:adding ngram " << ngram << std::endl;
-        }
-        substrings.push_back(ngram);
-      }
-    }
-  }
-}
-
-void Dictionary::computeSubwords(const std::string& word,
-                               std::vector<int32_t>& ngram_hashes) const {
-  for (size_t i = 0; i < word.size(); i++) {
-    std::string ngram;
-    if ((word[i] & 0xC0) == 0x80) continue;
-    for (size_t j = i, n = 1; j < word.size() && n <= args_->maxn; n++) {
-      ngram.push_back(word[j++]);
-      while (j < word.size() && (word[j] & 0xC0) == 0x80) {
-        ngram.push_back(word[j++]);
-      }
-      if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
-        int32_t h = hash(ngram) % args_->bucket;
         // add hash of any ngram
-        pushHash(ngram_hashes, h);
+        pushHash(ngrams, h);
+        if (substrings) {
+          substrings->push_back(ngram);
+        }
       }
     }
   }
@@ -323,7 +308,7 @@ void Dictionary::initTableDiscard() {
 		// freq(word)
     real f = real(words_[i].count) / real(ntokens_);
     pdiscard_[i] = std::sqrt(args_->t / f) + args_->t / f;
-		if (args->verbose > 2) {
+		if (args_->verbose > 2) {
       std::cerr << "DBG:discard of word=" << words_[i].word << ":" << pdiscard_[i] << std::endl;
 		}
   }
